@@ -17,24 +17,22 @@ A mobile-first judging application built with Next.js App Router and Supabase. D
    ```
 
    If the query returns no rows, apply the [initial database schema](./supabase/migrations/20260914000000_initial_schema.sql) in the SQL Editor. Do not rerun it over existing application tables. The schema includes the rubric, explicit grants, RLS, and the committee access-code hash. A publishable or secret API key alone cannot execute schema migrations.
-4. Add real teams in the committee dashboard, then set `NEXT_PUBLIC_DEMO_MODE=false` in `.env.local` and restart the server. The sample teams are intentionally not inserted into the production database.
-5. Run `npm run dev` and verify committee login, team management, scoring, and leaderboard updates.
+4. Run `npm run dev`, sign in to the committee dashboard, and add the real judges and teams. A fresh database has no judge, team, or score records.
+5. Verify committee login, team management, scoring, and leaderboard updates before deploying. Missing configuration or tables produce an error; the application does not fall back to sample records.
 
 ## Environment variables
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL.
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: browser-safe publishable key.
-- `NEXT_PUBLIC_DEMO_MODE`: set to `true` until the database schema and server secret key are ready. Set to `false` for production data.
 - `SUPABASE_SECRET_KEY`: server-only key. Never use a `NEXT_PUBLIC_` prefix.
 - `JUDGE_SESSION_SECRET`: random string of at least 32 characters used to sign session cookies.
-- `COMMITTEE_CODE_HASH`: local demo fallback in `salt:scrypt-hash` format. In production, the hash is read from `committee_access_codes` in Supabase instead.
 - `GOOGLE_SHEETS_WEBHOOK_URL`: optional asynchronous mirror after a successful Supabase write.
 
 ## Committee access
 
 The dashboard uses a single access code instead of an email/password account. The server compares a salted scrypt hash and issues a 12-hour HttpOnly cookie. The code is never bundled into browser JavaScript. In production, the hash is read from the protected `committee_access_codes` table. Its row-level security is enabled, and no anonymous or authenticated table access is granted.
 
-To activate production access, apply the database schema, provide `SUPABASE_SECRET_KEY`, and set `NEXT_PUBLIC_DEMO_MODE=false`. Until all three are ready, keep the app in clearly labeled demo mode. Committee data management now goes through authenticated server routes, never directly from the browser with the publishable key.
+To activate access, apply the database schema and configure all required Supabase and session environment variables in both local development and Vercel Production. Redeploy after changing Vercel environment variables. Committee data management goes through authenticated server routes, never directly from the browser with the publishable key. The migration seeds only the rubric and access-code hash; it does not create sample judges, teams, or scores.
 
 ## Data architecture
 

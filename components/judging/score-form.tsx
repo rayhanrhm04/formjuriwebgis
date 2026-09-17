@@ -7,7 +7,7 @@ import { calculateBoothScore, calculatePitchingScore } from "@/lib/scoring/calcu
 import type { Criterion, Score, ScoringSession, SessionSlug, Team } from "@/types";
 import { Brand, SkeletonCards, Toast } from "@/components/ui";
 
-type Payload = { team: Team; session: ScoringSession; criteria: Criterion[]; score: (Score & { score_items: Array<{criterion_id:string;value:number}> }) | null; demo?: boolean; judgeId?: string };
+type Payload = { team: Team; session: ScoringSession; criteria: Criterion[]; score: (Score & { score_items: Array<{criterion_id:string;value:number}> }) | null };
 
 export function ScoreForm({teamId,sessionSlug}:{teamId:string;sessionSlug:SessionSlug}) {
   const [data,setData] = useState<Payload|null>(null);
@@ -17,7 +17,7 @@ export function ScoreForm({teamId,sessionSlug}:{teamId:string;sessionSlug:Sessio
   const [toast,setToast] = useState<{tone:"success"|"error";text:string}|null>(null);
   const refs = useRef<Record<string,HTMLElement|null>>({});
 
-  useEffect(()=>{ let active=true; (async()=>{try{const response=await fetch(`/api/scores?teamId=${teamId}&session=${sessionSlug}`,{cache:"no-store"}); if(!response.ok) throw new Error(); const payload=await response.json() as Payload; if(!active)return; if(payload.demo&&payload.judgeId){const stored=localStorage.getItem(`mapid-demo-score:${payload.judgeId}:${teamId}:${sessionSlug}`);if(stored){const parsed=JSON.parse(stored) as {status:"draft"|"submitted";items:Array<{criterionId:string;value:number|null}>};payload.score={id:"demo",judge_id:payload.judgeId,team_id:teamId,session_id:payload.session.id,status:parsed.status,updated_at:new Date().toISOString(),score_items:parsed.items.filter(item=>item.value!==null).map(item=>({criterion_id:item.criterionId,value:item.value??0}))};}} setData(payload); const existing=new Map((payload.score?.score_items??[]).map(item=>[item.criterion_id,Number(item.value)])); setValues(Object.fromEntries(payload.criteria.map(item=>[item.id,existing.get(item.id)??null])));}catch{setToast({tone:"error",text:"Unable to load the scoring form."});}})(); return()=>{active=false};},[teamId,sessionSlug]);
+  useEffect(()=>{ let active=true; (async()=>{try{const response=await fetch(`/api/scores?teamId=${teamId}&session=${sessionSlug}`,{cache:"no-store"}); if(!response.ok) throw new Error(); const payload=await response.json() as Payload; if(!active)return; setData(payload); const existing=new Map((payload.score?.score_items??[]).map(item=>[item.criterion_id,Number(item.value)])); setValues(Object.fromEntries(payload.criteria.map(item=>[item.id,existing.get(item.id)??null])));}catch{setToast({tone:"error",text:"Unable to load the scoring form."});}})(); return()=>{active=false};},[teamId,sessionSlug]);
 
   const orderedValues = useMemo(() => data?.criteria.map(item=>values[item.id] ?? null) ?? [], [data?.criteria, values]);
   const total = useMemo(()=>sessionSlug==="booth"?calculateBoothScore(orderedValues):calculatePitchingScore(orderedValues),[orderedValues,sessionSlug]);
@@ -35,12 +35,12 @@ export function ScoreForm({teamId,sessionSlug}:{teamId:string;sessionSlug:Sessio
     const items=data.criteria.filter(item=>values[item.id]!==null).map(item=>({criterionId:item.id,value:values[item.id]}));
     if (!items.length) { setToast({tone:"error",text:"Score at least one criterion before saving a draft."}); return; }
     setSaving(true); setConfirm(false);
-    try { const response=await fetch("/api/scores",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({teamId,sessionSlug,status,items})}); const result=await response.json() as {error?:string}; if(!response.ok) throw new Error(result.error); if(data.demo&&data.judgeId)localStorage.setItem(`mapid-demo-score:${data.judgeId}:${teamId}:${sessionSlug}`,JSON.stringify({status,items})); setData({...data,score:{...(data.score??{id:"",judge_id:"",team_id:teamId,session_id:data.session.id,updated_at:new Date().toISOString(),score_items:[]}),status,score_items:items.map(item=>({criterion_id:item.criterionId,value:item.value??0}))}}); setToast({tone:"success",text:status==="submitted"?(data.demo?"Demo score saved on this device.":"Score saved. The leaderboard has been updated."):"Draft saved."}); }
+    try { const response=await fetch("/api/scores",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({teamId,sessionSlug,status,items})}); const result=await response.json() as {error?:string}; if(!response.ok) throw new Error(result.error); setData({...data,score:{...(data.score??{id:"",judge_id:"",team_id:teamId,session_id:data.session.id,updated_at:new Date().toISOString(),score_items:[]}),status,score_items:items.map(item=>({criterion_id:item.criterionId,value:item.value??0}))}}); setToast({tone:"success",text:status==="submitted"?"Score saved. The leaderboard has been updated.":"Draft saved."}); }
     catch(error){setToast({tone:"error",text:error instanceof Error?error.message:"We couldn’t save your score. Your input is still safe on this screen."});}
     finally{setSaving(false); setTimeout(()=>setToast(null),4200);}
   }
 
-  if (!data) return <main><div className="shell" style={{padding:"22px 0"}}><Brand/><div style={{marginTop:50}}><SkeletonCards count={4}/></div></div>{toast&&<Toast tone={toast.tone}>{toast.text}</Toast>}</main>;
+  if (!data) return <main><div className="shell" style={{padding:"22px 0"}}><Brand/><div style={{marginTop:50}}>{toast ? <div className="card" role="alert" style={{padding:24}}><p>{toast.text}</p><Link href="/judge" className="button button-secondary">Back to teams</Link></div> : <SkeletonCards count={4}/>}</div></div></main>;
   const wasSubmitted=data.score?.status==="submitted";
   return <main className="score-page">
     <header className="score-nav"><div className="shell"><Link href="/judge" className="score-back" aria-label="Back to the team list"><ArrowLeft size={18}/><span>All teams</span></Link><div className="score-team-label"><span>{data.team.institution || "Competition team"}</span><strong>{data.team.name}</strong></div></div></header>

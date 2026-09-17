@@ -6,32 +6,27 @@ import { adminRequest } from "@/lib/admin-request";
 import type { Judge } from "@/types";
 import { AdminHeading } from "./admin-shell";
 import { EmptyState, SkeletonCards, Toast } from "@/components/ui";
-import { demoJudges } from "@/lib/demo-data";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export function JudgeManager() {
-  const configured = isSupabaseConfigured();
-  const [rows, setRows] = useState<Judge[] | null>(configured ? null : demoJudges);
+  const [rows, setRows] = useState<Judge[] | null>(null);
   const [editing, setEditing] = useState<Judge | "new" | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [toast, setToast] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   async function load() {
-    if (!configured) return;
     const { judges } = await adminRequest<{ judges: Judge[] }>("/api/admin/judges");
     setRows(judges);
   }
 
   useEffect(() => {
-    if (!configured) return;
     void adminRequest<{ judges: Judge[] }>("/api/admin/judges")
       .then(({ judges }) => setRows(judges))
       .catch(value => {
         setRows([]);
         setToast({ tone: "error", text: value instanceof Error ? value.message : "Unable to load judges." });
       });
-  }, [configured]);
+  }, []);
 
   function open(row?: Judge) {
     setEditing(row ?? "new");
@@ -43,13 +38,6 @@ export function JudgeManager() {
     event.preventDefault();
     if (!editing) return;
     const payload = { name, email: email || null };
-    if (!configured) {
-      const next: Judge = { id: editing === "new" ? crypto.randomUUID() : editing.id, ...payload };
-      setRows(current => editing === "new" ? [...(current ?? []), next] : (current ?? []).map(row => row.id === next.id ? next : row));
-      setEditing(null);
-      setToast({ tone: "success", text: "Demo judge data updated." });
-      return;
-    }
     try {
       await adminRequest("/api/admin/judges", {
         method: editing === "new" ? "POST" : "PATCH",
@@ -65,11 +53,6 @@ export function JudgeManager() {
 
   async function remove(row: Judge) {
     if (!window.confirm(`Delete ${row.name}?`)) return;
-    if (!configured) {
-      setRows(current => (current ?? []).filter(item => item.id !== row.id));
-      setToast({ tone: "success", text: "Demo judge deleted." });
-      return;
-    }
     try {
       await adminRequest("/api/admin/judges", { method: "DELETE", body: JSON.stringify({ id: row.id }) });
       setToast({ tone: "success", text: "Judge deleted." });

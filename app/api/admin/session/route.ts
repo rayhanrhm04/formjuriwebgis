@@ -1,14 +1,17 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { committeeCookieName, committeeSessionSeconds, createCommitteeSession, hasCommitteeSession, verifyCommitteeCode } from "@/lib/committee-auth";
-import { isDemoServer } from "@/lib/demo-data";
 import { isSameOrigin } from "@/lib/request-origin";
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
 export async function GET() {
   const session = (await cookies()).get(committeeCookieName)?.value;
-  return NextResponse.json({ authenticated: await hasCommitteeSession(session), demo: isDemoServer() });
+  try {
+    return NextResponse.json({ authenticated: await hasCommitteeSession(session) });
+  } catch {
+    return NextResponse.json({ error: "Committee access is temporarily unavailable." }, { status: 503 });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Incorrect access code." }, { status: 401 });
     }
     attempts.delete(ip);
-    const response = NextResponse.json({ authenticated: true, demo: isDemoServer() });
+    const response = NextResponse.json({ authenticated: true });
     response.cookies.set(committeeCookieName, createCommitteeSession(codeHash), {
       httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: committeeSessionSeconds,
     });

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { LegacyDemoCleanup } from "@/components/legacy-demo-cleanup";
 import "./globals.css";
 
 const figtree = localFont({
@@ -26,5 +27,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#f8f9fd" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={figtree.variable}><body>{children}</body></html>;
+  return <html lang="en" className={figtree.variable}><body><LegacyDemoCleanup/>{children}</body></html>;
 }

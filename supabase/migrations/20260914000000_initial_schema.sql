@@ -172,9 +172,9 @@ with session_totals as (
   from session_totals group by judge_id, team_id
 ), aggregates as (
   select t.id, t.name, t.institution,
-    round(avg(j.booth), 2) filter (where j.booth is not null) as booth_avg,
-    round(avg(j.pitching), 2) filter (where j.pitching is not null) as pitching_avg,
-    round(avg((j.booth + j.pitching) / 2), 2) filter (where j.booth is not null and j.pitching is not null) as final_avg,
+    round(avg(j.booth), 2) as booth_avg,
+    round(avg(j.pitching), 2) as pitching_avg,
+    round(avg((j.booth + j.pitching) / 2), 2) as final_avg,
     count(*) filter (where j.booth is not null and j.pitching is not null) as completed_judges,
     (select count(*) from public.judges) as total_judges
   from public.teams t left join judge_finals j on j.team_id = t.id
@@ -275,10 +275,3 @@ join (values
   ('pitching','2.3','Ability to answer judges'' questions','Answers are accurate, relevant, and sufficiently detailed.',30,3),
   ('pitching','2.4','Communication of deliverables','The presentation slides explain project deliverables clearly and effectively.',15,4)
 ) as v(slug,code,name,description,max_score,sort_order) on v.slug = s.slug;
-
-insert into public.judges(name) values
-  ('Aditya Chandra Reymonza'),
-  ('Akihiro Kawano'),
-  ('Ir. Nurul Hamid, S.T., M.Sc.'),
-  ('Muftia Oktavialih'),
-  ('Angga Nurdiansyah');

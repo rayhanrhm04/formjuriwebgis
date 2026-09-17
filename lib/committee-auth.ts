@@ -2,20 +2,18 @@ import "server-only";
 
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isDemoServer } from "@/lib/demo-data";
 
 export const committeeCookieName = "mapid_committee_session";
 export const committeeSessionSeconds = 60 * 60 * 12;
 
 async function currentCodeHash(): Promise<string | null> {
-  if (isDemoServer()) return process.env.COMMITTEE_CODE_HASH ?? null;
-
   const { data, error } = await createAdminClient()
     .from("committee_access_codes")
     .select("code_hash")
     .eq("id", 1)
     .single();
-  if (error || !data) return null;
+  if (error) throw error;
+  if (!data) return null;
   return data.code_hash;
 }
 

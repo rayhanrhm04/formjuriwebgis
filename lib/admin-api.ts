@@ -3,7 +3,6 @@ import "server-only";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { committeeCookieName, hasCommitteeSession } from "@/lib/committee-auth";
-import { isDemoServer } from "@/lib/demo-data";
 import { isSameOrigin } from "@/lib/request-origin";
 
 export async function requireCommittee(request: NextRequest, mutation = false): Promise<NextResponse | null> {
@@ -22,9 +21,6 @@ export async function requireCommittee(request: NextRequest, mutation = false): 
     return NextResponse.json({ error: "Committee access is temporarily unavailable." }, { status: 503 });
   }
 
-  if (isDemoServer()) {
-    return NextResponse.json({ error: "Database mode is not active." }, { status: 409 });
-  }
   return null;
 }
 

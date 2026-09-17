@@ -1,7 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 export function isSupabaseConfigured() {
-  return process.env.NEXT_PUBLIC_DEMO_MODE !== "true" && Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 }
 
 export function createClient() {

@@ -1,4 +1,0 @@
--- Add real competition teams here or through Admin > Teams.
--- Example (intentionally commented; teams are never hardcoded in the frontend):
--- insert into public.teams(name, institution, project_title)
--- values ('Team Name', 'Institution', 'Project Title');

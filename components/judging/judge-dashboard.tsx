@@ -8,7 +8,7 @@ import type { Judge, ScoreStatus, Team } from "@/types";
 import { EmptyState, GradientHeader, SkeletonCards, StatusBadge } from "@/components/ui";
 
 type ScoreSummary = { team_id: string; status: ScoreStatus; scoring_sessions: { slug: string } | Array<{ slug: string }> | null };
-type DashboardData = { judge: Judge | null; teams: Team[]; scores: ScoreSummary[]; demo?: boolean };
+type DashboardData = { judge: Judge | null; teams: Team[]; scores: ScoreSummary[] };
 
 export function JudgeDashboard() {
   const [data,setData] = useState<DashboardData | null>(null);
@@ -22,22 +22,15 @@ export function JudgeDashboard() {
       const response = await fetch("/api/judge/me", { cache:"no-store" });
       if (!response.ok) throw new Error();
       const value = await response.json() as DashboardData;
-      if (value.demo && value.judge) {
-        value.scores = value.teams.flatMap(team => (["booth","pitching"] as const).flatMap(slug => {
-          const saved = localStorage.getItem(`mapid-demo-score:${value.judge!.id}:${team.id}:${slug}`);
-          if (!saved) return [];
-          const parsed = JSON.parse(saved) as { status: ScoreStatus };
-          return [{ team_id: team.id, status: parsed.status, scoring_sessions: { slug } }];
-        }));
-      }
-      setData(value);
       if (!value.judge) {
         const judgesResponse = await fetch("/api/judges", { cache: "no-store" });
-        if (!judgesResponse.ok) throw new Error();
+        if (!judgesResponse.ok) throw new Error("The judge list could not be loaded. Check the database connection.");
         const judgePayload = await judgesResponse.json() as { judges: Judge[] };
         setJudges(judgePayload.judges);
       }
-    } catch { setError("We couldn’t load the data. Check your connection and try again."); }
+      setData(value);
+      setError("");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to load judging data."); }
   },[]);
   useEffect(()=>{ void load(); },[load]);
 
@@ -58,10 +51,10 @@ export function JudgeDashboard() {
     return (filter === "All" || state === filter) && `${team.name} ${team.institution ?? ""} ${team.project_title ?? ""}`.toLowerCase().includes(query.toLowerCase());
   }),[data,filter,query,statusFor]);
 
-  if (!data) return <main><GradientHeader title="Loading the judging workspace…"/><div className="shell"><SkeletonCards/></div></main>;
+  if (!data) return <main><GradientHeader title={error ? "Judging workspace unavailable" : "Loading the judging workspace…"}/><div className="shell">{error ? <div className="card" role="alert" style={{padding:24}}><p>{error}</p><button className="button button-secondary" onClick={()=>void load()}>Try again</button></div> : <SkeletonCards/>}</div></main>;
   if (!data.judge) return <main><GradientHeader eyebrow="Judge Access" title={<>Select <span className="gradient-text">your name</span></>} description="Your identity is used to save your progress and scores."/><div className="shell" style={{paddingBottom:50}}>{error && <p role="alert" className="status status-progress" style={{marginBottom:16}}>{error}</p>}<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,280px),1fr))",gap:14}}>{judges.map((judge,index)=><button key={judge.id} onClick={()=>choose(judge.id)} className="card" style={{padding:20,textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:15,color:"inherit"}}><span style={{width:44,height:44,borderRadius:14,background:"#eef0ff",display:"grid",placeItems:"center",fontWeight:850,color:"#5a65d7"}}>{index+1}</span><span style={{fontWeight:780,lineHeight:1.35,flex:1}}>{judge.name}</span><ArrowRight size={18} color="#7c8496"/></button>)}</div>{!judges.length && !error && <EmptyState title="No judges available" description="The committee can add judges from the admin dashboard."/>}</div></main>;
 
-  return <main style={{paddingBottom:50}}><GradientHeader eyebrow={data.demo?"Demo Mode • Judge Dashboard":"Judge Dashboard"} title={<>Welcome,<br/><span className="gradient-text">{data.judge.name}</span></>} description="Select a team, then complete both the Booth and Pitching evaluations."><button onClick={logout} className="button button-secondary" aria-label="Switch judge"><LogOut size={17}/> <span className="hidden sm:inline">Switch judge</span></button></GradientHeader>
+  return <main style={{paddingBottom:50}}><GradientHeader eyebrow="Judge Dashboard" title={<>Welcome,<br/><span className="gradient-text">{data.judge.name}</span></>} description="Select a team, then complete both the Booth and Pitching evaluations."><button onClick={logout} className="button button-secondary" aria-label="Switch judge"><LogOut size={17}/> <span className="hidden sm:inline">Switch judge</span></button></GradientHeader>
     <div className="shell"><section style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24}}>{([
       {label:"Total Teams",value:data.teams.length,icon:Users},{label:"Complete",value:completed,icon:CheckCircle2},{label:"Incomplete",value:data.teams.length-completed,icon:ClipboardList}
     ] satisfies Array<{label:string;value:number;icon:LucideIcon}>).map(item=>{const Icon=item.icon;return <div className="card" key={item.label} style={{padding:"clamp(14px,3vw,21px)"}}><Icon size={19} color="#626cdc"/><div style={{fontSize:"clamp(23px,5vw,32px)",fontWeight:850,margin:"12px 0 3px"}}>{item.value}</div><div className="muted" style={{fontSize:12}}>{item.label}</div></div>})}</section>

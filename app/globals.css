@@ -107,8 +107,6 @@ body{background:radial-gradient(circle at 8% 2%,rgba(35,95,190,.22),transparent 
 .podium-icon{background:#22294a;color:#aab2ff}.leaderboard-title,.leaderboard-row,.score-judge-list,.detail-session,.detail-session>div{border-color:#252b3b}.table-head{background:#0e121c;color:#8c96aa}.mobile-metrics span,.score-judge-list button:hover{background:#191e2b}
 .admin-sidebar{background:rgba(12,15,24,.94);border-color:#252b3b}.admin-sidebar nav a{color:#9da6ba}.admin-sidebar nav a.active{background:#1d2341;color:#b5bdff}.admin-mobile-head,.admin-bottom{background:rgba(11,14,23,.95);border-color:#252b3b}.admin-mobile-head button{background:#1b202d;color:#eef1fa}.admin-bottom a{color:#858ea2}.admin-bottom a.active{color:#b1b9ff;background:#1b213d}
 .score-detail>button,.score-team button{color:var(--ink)}
-.demo-pill{display:inline-flex;width:max-content;margin-top:18px;padding:6px 9px;border-radius:999px;background:#2b2143;color:#c9a8ff;border:1px solid #533b76;font-size:10px;font-weight:900;letter-spacing:.1em}
-.demo-banner{margin-bottom:18px;padding:11px 14px;border-radius:13px;background:#171e37;border:1px solid #313d6c;color:#aeb9ff;font-size:12px;font-weight:750}
 .brand-logo{width:auto;height:52px;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(69,96,255,.16))}
 header .brand-logo,.admin-mobile-head .brand-logo{height:43px}
 code{color:#b6beff;background:#1c2237;padding:2px 5px;border-radius:5px}

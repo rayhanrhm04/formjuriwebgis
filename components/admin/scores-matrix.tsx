@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { adminRequest } from "@/lib/admin-request";
 import { AdminHeading } from "./admin-shell";
 import { EmptyState, SkeletonCards, StatusBadge, Toast } from "@/components/ui";
-import { demoJudges, demoLeaderboard, demoTeams } from "@/lib/demo-data";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 type MatrixRow = { team_id: string; team_name: string; judge_id: string; judge_name: string; booth: number | null; pitching: number | null; final: number | null };
 type Criterion = { code: string; name: string; max_score: number; sort_order: number };
@@ -15,26 +13,16 @@ type Session = { name: string; slug: string };
 type DetailScore = { id: string; status: string; scoring_sessions: Session | Session[]; score_items: DetailItem[] };
 
 const format = (value: number | null) => value === null ? "—" : Number(value).toFixed(2);
-const demoRows: MatrixRow[] = demoTeams.flatMap((team, teamIndex) => demoJudges.map((judge, judgeIndex) => {
-  const base = demoLeaderboard[teamIndex];
-  const complete = judgeIndex < (base.completed_judges ?? 0);
-  const booth = complete && base.booth_avg !== null ? Math.max(0, base.booth_avg + (judgeIndex - 2) * .7) : null;
-  const pitching = complete && base.pitching_avg !== null ? Math.max(0, base.pitching_avg + (2 - judgeIndex) * .5) : null;
-  return { team_id: team.id, team_name: team.name, judge_id: judge.id, judge_name: judge.name, booth, pitching, final: booth !== null && pitching !== null ? (booth + pitching) / 2 : null };
-}));
-
 export function ScoresMatrix() {
-  const configured = isSupabaseConfigured();
-  const [rows, setRows] = useState<MatrixRow[] | null>(configured ? null : demoRows);
+  const [rows, setRows] = useState<MatrixRow[] | null>(null);
   const [detail, setDetail] = useState<{ team: string; judge: string; scores: DetailScore[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!configured) return;
     void adminRequest<{ rows: MatrixRow[] }>("/api/admin/scores")
       .then(({ rows }) => setRows(rows))
       .catch(value => { setRows([]); setError(value instanceof Error ? value.message : "Unable to load scores."); });
-  }, [configured]);
+  }, []);
 
   const teams = useMemo(() => {
     const grouped = new Map<string, { name: string; rows: MatrixRow[] }>();
@@ -47,10 +35,6 @@ export function ScoresMatrix() {
   }, [rows]);
 
   async function show(row: MatrixRow) {
-    if (!configured) {
-      setDetail({ team: row.team_name, judge: row.judge_name, scores: [] });
-      return;
-    }
     try {
       const params = new URLSearchParams({ teamId: row.team_id, judgeId: row.judge_id });
       const { scores } = await adminRequest<{ scores: DetailScore[] }>(`/api/admin/scores?${params}`);

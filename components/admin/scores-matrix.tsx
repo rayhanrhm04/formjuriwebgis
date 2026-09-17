@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { adminRequest } from "@/lib/admin-request";
 import { AdminHeading } from "./admin-shell";
@@ -15,12 +15,16 @@ type DetailScore = { id: string; status: string; scoring_sessions: Session | Ses
 const format = (value: number | null) => value === null ? "—" : Number(value).toFixed(2);
 export function ScoresMatrix() {
   const [rows, setRows] = useState<MatrixRow[] | null>(null);
+  const [scoreCount, setScoreCount] = useState<number | null>(null);
   const [detail, setDetail] = useState<{ team: string; judge: string; scores: DetailScore[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
-    void adminRequest<{ rows: MatrixRow[] }>("/api/admin/scores")
-      .then(({ rows }) => setRows(rows))
+    void adminRequest<{ rows: MatrixRow[]; scoreCount: number }>("/api/admin/scores")
+      .then(({ rows, scoreCount }) => { setRows(rows); setScoreCount(scoreCount); })
       .catch(value => { setRows([]); setError(value instanceof Error ? value.message : "Unable to load scores."); });
   }, []);
 
@@ -44,8 +48,34 @@ export function ScoresMatrix() {
     }
   }
 
+  async function resetScores() {
+    setResetting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await adminRequest<{ deleted: number }>("/api/admin/scores", {
+        method: "DELETE",
+        body: JSON.stringify({ confirm: "RESET_ALL_SCORES" }),
+      });
+      setConfirmReset(false);
+      setDetail(null);
+      const result = await adminRequest<{ rows: MatrixRow[]; scoreCount: number }>("/api/admin/scores");
+      setRows(result.rows);
+      setScoreCount(result.scoreCount);
+      setNotice("All judge scores have been reset.");
+    } catch (value) {
+      setError(value instanceof Error ? value.message : "Unable to reset scores.");
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return <>
-    <AdminHeading title="Scores" description="Submitted score matrix by team and judge." />
+    <AdminHeading title="Scores" description="Submitted score matrix by team and judge." action={
+      <button className="button button-danger" onClick={() => setConfirmReset(true)} disabled={!scoreCount || resetting}>
+        <Trash2 size={16} /> Reset scores
+      </button>
+    } />
     {rows === null ? <SkeletonCards /> : !teams.length ? <EmptyState title="No teams" description="The matrix will be available after teams are added." /> :
       <section style={{ display: "grid", gap: 13 }}>
         {teams.map(team => {
@@ -74,6 +104,18 @@ export function ScoresMatrix() {
         }) : <p className="muted">No submitted criterion scores for this judge and team.</p>}
       </section>
     </div>}
+    {confirmReset && <div className="dialog-backdrop" role="presentation" onMouseDown={() => { if (!resetting) setConfirmReset(false); }}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="reset-scores-title" aria-describedby="reset-scores-description" className="card confirm-dialog" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === "Escape" && !resetting) setConfirmReset(false); }}>
+        <div className="dialog-icon dialog-icon-danger"><Trash2 size={20} /></div>
+        <h2 id="reset-scores-title">Reset all scores?</h2>
+        <p id="reset-scores-description">This permanently removes all draft and submitted scores, including individual criterion values, from the connected database. Judges, teams, and criteria will remain. If this site shares a database with production, the live site will be affected too.</p>
+        <div>
+          <button className="button button-secondary" autoFocus disabled={resetting} onClick={() => setConfirmReset(false)}>No, keep scores</button>
+          <button className="button button-danger-solid" disabled={resetting} onClick={() => void resetScores()}>{resetting ? "Resetting…" : "Yes, reset scores"}</button>
+        </div>
+      </section>
+    </div>}
     {error && <Toast tone="error">{error}</Toast>}
+    {notice && <Toast tone="success">{notice}</Toast>}
   </>;
 }
